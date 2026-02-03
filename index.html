@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Love Messages</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #fff0f5;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            touch-action: manipulation;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .love-window {
+            position: absolute;
+            width: 250px; /* 加宽条幅，让文字显示完整 */
+            min-height: 60px; /* 增加最小高度 */
+            background-color: #ffb6c1;
+            color: white;
+            font-size: 14px; /* 稍微减小字体 */
+            text-align: center;
+            line-height: 1.2; /* 调整行高 */
+            border-radius: 15px;
+            user-select: none;
+            pointer-events: none;
+            will-change: transform, opacity;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.2);
+            transition: all 0.5s ease;
+            opacity: 0;
+            animation: fadeIn 0.8s forwards;
+            transform-origin: center;
+            padding: 10px 15px; /* 增加内边距 */
+            box-sizing: border-box;
+            overflow: hidden;
+            white-space: normal; /* 允许多行显示 */
+            word-wrap: break-word; /* 长单词自动换行 */
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .special-love {
+            background: linear-gradient(45deg, #ff6b9e, #ff8fab);
+            font-size: 15px;
+            font-weight: bold;
+            z-index: 10;
+            box-shadow: 0 5px 20px rgba(255,107,158,0.6);
+            animation: pulse 2s infinite alternate;
+            width: 270px; /* 特殊条幅也加宽 */
+        }
+
+        .special-red {
+            background: linear-gradient(45deg, #ff0000, #ff4d4d);
+            font-size: 15px;
+            font-weight: bold;
+            z-index: 10;
+            box-shadow: 0 5px 20px rgba(255,0,0,0.6);
+            animation: pulse 2s infinite alternate;
+            width: 270px; /* 特殊条幅也加宽 */
+        }
+
+        .permanent-message {
+            background: linear-gradient(45deg, #ff1493, #ff69b4);
+            font-size: 16px;
+            font-weight: bold;
+            z-index: 15;
+            box-shadow: 0 5px 20px rgba(255,20,147,0.6);
+            color: white;
+            text-shadow: 0 0 5px rgba(0,0,0,0.3);
+            border: 2px solid white;
+            width: 280px; /* 永久条幅加宽 */
+            white-space: normal; /* 允许多行 */
+            min-height: 60px;
+        }
+
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.05); }
+        }
+
+        .heart {
+            font-size: min(300px, 30vw);
+            color: #ff0000; /* 改为红色 */
+            transition: all 0.3s;
+            z-index: 5;
+            animation: heartbeat 1.5s ease-in-out infinite;
+            text-shadow: 0 0 30px rgba(255,0,0,0.5); /* 红色阴影 */
+            position: relative;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            25% { transform: scale(1.1); }
+            50% { transform: scale(1); }
+            75% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .heart:active {
+            transform: scale(0.95);
+        }
+
+        .counter {
+            display: none; /* 隐藏计数器 */
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .control-btn {
+            width: 40px;
+            height: 40px;
+            background-color: rgba(255, 182, 193, 0.7);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            border: none;
+            outline: none;
+            color: white;
+            font-size: 18px;
+            transition: all 0.3s;
+        }
+
+        .control-btn:hover {
+            background-color: rgba(255, 107, 158, 0.8);
+            transform: scale(1.1);
+        }
+
+        #changeBtn {
+            display: none; /* 隐藏铅笔按钮 */
+        }
+    </style>
+</head>
+<body>
+    <div class="heart">❤️</div> <!-- 熊换成红色爱心 -->
+    <div class="counter">0/52</div>
+    <div class="controls">
+        <button class="control-btn" id="changeBtn">✎</button>
+        <button class="control-btn" id="musicBtn">♪</button>
+    </div>
+
+    <audio id="backgroundMusic" src="music.mp3" preload="auto" loop></audio>
+
+    <script>
+        // 配置常量
+        const CONFIG = {
+            MAX_MESSAGES: 52,
+            TOTAL_TIME: 180000, // 3分钟 = 180000毫秒
+            APPEAR_DELAY: 180000 / 52, // 计算每条消息出现的间隔时间(约3461毫秒)
+            SPECIAL_PHRASE: "小辣椒！开森快乐每一天！",
+            SPECIAL_RED_PHRASE: "小辣椒，开森快乐每一天！",
+            PERMANENT_PHRASE: "小辣椒，开森快乐每一天！",
+            SPECIAL_RED_INTERVAL: 5000, // 红色特殊条幅每隔5秒出现一次
+            CHANGE_INTERVAL: 10000, // 10秒改变一次文字
+            MUSIC_VOLUME: 0.4
+        };
+
+        // DOM元素
+        const heart = document.querySelector('.heart');
+        const counter = document.querySelector('.counter');
+        const musicBtn = document.getElementById('musicBtn');
+        const changeBtn = document.getElementById('changeBtn');
+        const music = document.getElementById('backgroundMusic');
+
+        // 不同语言的"我爱你"和其他爱的表达
+        const lovePhrases = [
+            CONFIG.SPECIAL_PHRASE,
+            "Xiaolajiao, happy every day!", // 英语
+            "Xiaolajiao, joyeux tous les jours!", // 法语
+            "Xiaolajiao, fröhlich jeden Tag!", // 德语
+            "Xiaolajiao, felice ogni giorno!", // 意大利语
+            "Xiaolajiao, feliz todos los días!", // 西班牙语
+            "Xiaolajiao, feliz todos os dias!", // 葡萄牙语
+            "Сяолацзяо, счастлив каждый день!", // 俄语
+            "シャオラージャオ、毎日楽しく!", // 日语
+            "샤오라지아오, 매일 행복해!", // 韩语
+            "小辣椒，开心快乐每一天!", // 中文简体
+            "小辣椒，開心快樂每一天!", // 中文繁体
+            "شياولا جياو، سعيدة كل يوم!", // 阿拉伯语
+            "Xiaolajiao, χαρούμενη κάθε μέρα!", // 希腊语
+            "Xiaolajiao, blij elke dag!", // 荷兰语
+            "Xiaolajiao, glad varje dag!", // 瑞典语
+            "Xiaolajiao, glad hver dag!", // 丹麦语
+            "Xiaolajiao, iloinen joka päivä!", // 芬兰语
+            "Xiaolajiao, masaya araw-araw!", // 菲律宾语
+            "เซียวลาจีเยา，มีความสุขทุกวัน!", // 泰语
+            "Xiaolajiao, vui vẻ mỗi ngày!", // 越南语
+            "Xiaolajiao, her gün mutlu!", // 土耳其语
+            "שיאולאג'יאו, שמחה כל יום!", // 希伯来语(女)
+            "Xiaolajiao, laimīga katru dienu!", // 拉脱维亚语
+            "Xiaolajiao, laiminga kiekvieną dieną!", // 立陶宛语
+            "Xiaolajiao, sretna svaki dan!", // 克罗地亚语
+            "Xiaolajiao, vesela vsak dan!", // 斯洛文尼亚语
+            "Xiaolajiao, boldog minden nap!", // 匈牙利语
+            "Xiaolajiao, šťastná každý den!", // 捷克语
+            "Xiaolajiao, šťastný každý deň!", // 斯洛伐克语
+            "Xiaolajiao, szczęśliwa każdego dnia!", // 波兰语
+            "Xiaolajiao, fericită în fiecare zi!", // 罗马尼亚语
+            "Xiaolajiao, farin ciki kowace rana!", // 豪萨语
+            "Xiaolajiao, fara zuva rega rega!", // 绍纳语
+            "Xiaolajiao, furaha kila siku!", // 斯瓦希里语
+            "Xiaolajiao, itumelese letsatsi le leng le le leng!", // 茨瓦纳语
+            "Xiaolajiao, njabulo nsuku zonke!", // 祖鲁语
+            "Xiaolajiao, kuaile meitian!", // 中文拼音
+            "Xiaolajiao, gembira setiap hari!", // 马来语
+            "Xiaolajiao, bahagia setiap hari!", // 印尼语
+            "शिआओलाजिआओ, हर दिन खुश रहो!" // 印地语(女)
+        ];
+
+        // 状态变量
+        let messages = [];
+        let isMusicPlaying = false;
+        let changeInterval;
+        let redMessageInterval;
+        let currentMessages = [...lovePhrases];
+        let isCreatingMessages = false;
+        let permanentMessage = null;
+
+        // 初始化
+        function init() {
+            setupEventListeners();
+            updateCounter();
+        }
+
+        // 设置事件监听器
+        function setupEventListeners() {
+            heart.addEventListener('click', handleHeartClick);
+            musicBtn.addEventListener('click', toggleMusic);
+            changeBtn.addEventListener('click', startChangingMessages);
+
+            // 确保音乐可以在用户交互后播放
+            document.addEventListener('click', enableAudio, { once: true });
+        }
+
+        // 处理爱心点击
+        function handleHeartClick() {
+            // 如果已经在创建消息或已达到上限，不再添加
+            if (isCreatingMessages || messages.length >= CONFIG.MAX_MESSAGES) return;
+
+            // 播放音乐
+            playMusic();
+
+            isCreatingMessages = true;
+
+            // 创建永久显示的条幅
+            createPermanentMessage();
+
+            // 创建剩余的条幅
+            for (let i = 0; i < CONFIG.MAX_MESSAGES; i++) {
+                setTimeout(() => {
+                    createMessage();
+                    if (i === CONFIG.MAX_MESSAGES - 1) {
+                        isCreatingMessages = false;
+                    }
+                }, i * CONFIG.APPEAR_DELAY);
+            }
+
+            // 开始显示红色特殊条幅
+            startRedMessages();
+        }
+
+        // 创建永久显示的条幅
+        function createPermanentMessage() {
+            if (permanentMessage) return;
+
+            permanentMessage = document.createElement('div');
+            permanentMessage.className = 'love-window permanent-message';
+            permanentMessage.textContent = CONFIG.PERMANENT_PHRASE;
+
+            // 初始位置随机
+            const x = Math.random() * (window.innerWidth - 280);
+            const y = Math.random() * (window.innerHeight - 60);
+            permanentMessage.style.left = `${x}px`;
+            permanentMessage.style.top = `${y}px`;
+            permanentMessage.style.opacity = '1';
+
+            document.body.appendChild(permanentMessage);
+
+            // 为永久条幅添加全屏飘动动画
+            animateElement(permanentMessage);
+        }
+
+        // 创建红色特殊条幅
+        function createRedMessage() {
+            const message = document.createElement('div');
+            message.className = 'love-window special-red';
+            message.textContent = CONFIG.SPECIAL_RED_PHRASE;
+
+            // 随机位置
+            const x = Math.random() * (window.innerWidth - 270);
+            const y = Math.random() * (window.innerHeight - 60);
+            message.style.left = `${x}px`;
+            message.style.top = `${y}px`;
+
+            document.body.appendChild(message);
+
+            // 为条幅添加动画
+            animateElement(message);
+
+            // 5秒后淡出并移除
+            setTimeout(() => {
+                message.style.opacity = '0';
+                setTimeout(() => {
+                    message.remove();
+                }, 1000);
+            }, 4000);
+        }
+
+        // 开始显示红色特殊条幅
+        function startRedMessages() {
+            // 如果已经有定时器，先清除
+            if (redMessageInterval) {
+                clearInterval(redMessageInterval);
+            }
+
+            // 立即显示第一个红色条幅
+            createRedMessage();
+
+            // 设置定时器定期显示
+            redMessageInterval = setInterval(() => {
+                createRedMessage();
+            }, CONFIG.SPECIAL_RED_INTERVAL);
+        }
+
+        // 创建消息条幅
+        function createMessage(isFirst = false) {
+            if (messages.length >= CONFIG.MAX_MESSAGES) return;
+
+            const message = document.createElement('div');
+            message.className = `love-window ${isFirst ? 'special-love' : ''}`;
+            message.style.position = 'absolute';
+            message.style.left = '0px';
+            message.style.top = '0px';
+
+            // 从当前消息池中随机选择一条消息
+            const randomIndex = Math.floor(Math.random() * currentMessages.length);
+            message.textContent = currentMessages[randomIndex];
+
+            // 如果是第一个，使用特殊消息
+            if (isFirst) {
+                message.textContent = CONFIG.SPECIAL_PHRASE;
+            }
+
+            // 随机颜色（非特殊条幅）
+            if (!isFirst) {
+                const hue = Math.floor(Math.random() * 30) + 330; // 粉色系
+                message.style.backgroundColor = `hsl(${hue}, 100%, 85%)`;
+            }
+
+            document.body.appendChild(message);
+
+            // 定位元素
+            positionElement(message, isFirst);
+
+            // 添加到消息数组
+            messages.push(message);
+            updateCounter();
+
+            // 为条幅添加动画
+            animateElement(message);
+        }
+
+        // 定位元素（随机全屏位置）
+        function positionElement(element, isFirst) {
+            const elementWidth = isFirst ? 270 : 250;
+            const elementHeight = 60;
+
+            // 如果是第一个，放在爱心上方
+            if (isFirst) {
+                const heartRect = heart.getBoundingClientRect();
+                element.style.left = `${heartRect.left + heartRect.width/2 - elementWidth/2}px`;
+                element.style.top = `${heartRect.top - elementHeight - 20}px`;
+            } else {
+                // 其他横幅随机全屏位置
+                const x = Math.random() * (window.innerWidth - elementWidth);
+                const y = Math.random() * (window.innerHeight - elementHeight);
+                element.style.left = `${x}px`;
+                element.style.top = `${y}px`;
+            }
+        }
+
+        // 动画元素（全屏自由飘动）
+        function animateElement(element) {
+            const startX = parseInt(element.style.left);
+            const startY = parseInt(element.style.top);
+            
+            // 获取元素宽度
+            const elementWidth = element.classList.contains('special-love') || 
+                                element.classList.contains('special-red') || 
+                                element.classList.contains('permanent-message') ? 270 : 250;
+
+            // 随机目标位置（全屏范围内）
+            const targetX = Math.random() * (window.innerWidth - elementWidth);
+            const targetY = Math.random() * (window.innerHeight - 60);
+
+            // 随机动画时间（8-15秒）
+            const duration = 8000 + Math.random() * 7000;
+
+            const startTime = performance.now();
+
+            function updatePosition(timestamp) {
+                const elapsed = timestamp - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easeProgress = easeInOutSine(progress);
+
+                const newX = startX + (targetX - startX) * easeProgress;
+                const newY = startY + (targetY - startY) * easeProgress;
+
+                element.style.transform = `translate(${newX - startX}px, ${newY - startY}px) rotate(${5 * Math.sin(progress * Math.PI * 4)}deg)`;
+
+                if (progress < 1) {
+                    requestAnimationFrame(updatePosition);
+                } else {
+                    // 到达目标后重新设置动画
+                    element.style.left = `${targetX}px`;
+                    element.style.top = `${targetY}px`;
+                    animateElement(element);
+                }
+            }
+
+            requestAnimationFrame(updatePosition);
+        }
+
+        // 开始定期改变条幅文字
+        function startChangingMessages() {
+            // 如果已经有定时器，先清除
+            if (changeInterval) {
+                clearInterval(changeInterval);
+            }
+
+            // 打乱消息池
+            shuffleArray(currentMessages);
+
+            // 更新所有现有条幅的文字（不包括永久条幅）
+            updateAllMessages();
+
+            // 设置定时器定期改变
+            changeInterval = setInterval(() => {
+                shuffleArray(currentMessages);
+                updateAllMessages();
+            }, CONFIG.CHANGE_INTERVAL);
+
+            // 更新按钮状态
+            changeBtn.textContent = "✓";
+            setTimeout(() => {
+                changeBtn.textContent = "✎";
+            }, 1000);
+        }
+
+        // 更新所有条幅的文字
+        function updateAllMessages() {
+            // 复制当前消息池
+            const messagesPool = [...currentMessages];
+
+            // 为每个条幅分配一个新消息
+            messages.forEach((msg, index) => {
+                // 跳过特殊条幅和永久条幅
+                if (msg.textContent === CONFIG.SPECIAL_PHRASE || msg === permanentMessage) return;
+
+                // 如果消息池用完了，重新填充
+                if (messagesPool.length === 0) {
+                    messagesPool.push(...currentMessages);
+                }
+
+                // 取出一个消息并从池中移除
+                const newMsg = messagesPool.pop();
+
+                // 添加淡出淡入效果
+                msg.style.opacity = '0';
+                setTimeout(() => {
+                    msg.textContent = newMsg;
+                    msg.style.opacity = '1';
+                }, 500);
+            });
+        }
+
+        // 音乐控制
+        function toggleMusic() {
+            if (isMusicPlaying) {
+                pauseMusic();
+            } else {
+                playMusic();
+            }
+        }
+
+        function playMusic() {
+            if (music.paused) {
+                music.volume = 0;
+                music.play()
+                    .then(() => {
+                        isMusicPlaying = true;
+                        fadeMusicVolume(0, CONFIG.MUSIC_VOLUME, 1000);
+                        updateMusicButton();
+                    })
+                    .catch(e => {
+                        console.error("音乐播放失败:", e);
+                    });
+            }
+        }
+
+        function pauseMusic() {
+            fadeMusicVolume(music.volume, 0, 1000, () => {
+                music.pause();
+                isMusicPlaying = false;
+                updateMusicButton();
+            });
+        }
+
+        function fadeMusicVolume(from, to, duration, callback) {
+            const startTime = performance.now();
+            music.volume = from;
+
+            function updateVolume() {
+                const elapsed = performance.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                music.volume = from + (to - from) * progress;
+
+                if (progress < 1) {
+                    requestAnimationFrame(updateVolume);
+                } else if (callback) {
+                    callback();
+                }
+            }
+
+            updateVolume();
+        }
+
+        function updateMusicButton() {
+            musicBtn.textContent = isMusicPlaying ? "♫" : "♪";
+            musicBtn.title = isMusicPlaying ? "停止音乐" : "播放音乐";
+        }
+
+        function updateCounter() {
+            counter.textContent = `${messages.length}/${CONFIG.MAX_MESSAGES}`;
+        }
+
+        function enableAudio() {
+            // 空函数，只是为了触发音频上下文
+        }
+
+        // 工具函数
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function easeInOutSine(t) {
+            return -(Math.cos(Math.PI * t) - 1) / 2;
+        }
+
+        // 初始化应用
+        init();
+    </script>
+</body>
+</html>
